@@ -4,6 +4,7 @@ A responsive React application that allows users to search for books using the G
 The project demonstrates client-side data fetching, component-based UI architecture, and clean state management using modern React practices.
 
 ## Live Demo
+https://dinara-t.github.io/GoogleBooksSearch/
 
 ## Features
 
