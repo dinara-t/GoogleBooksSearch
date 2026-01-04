@@ -1,0 +1,19 @@
+@use "../../sass/palette" as p;
+
+.wrap {
+  padding: 26px 0 14px;
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(26px, 3.2vw, 40px);
+  line-height: 1.1;
+  letter-spacing: -0.4px;
+}
+
+.subtitle {
+  margin: 10px 0 0;
+  max-width: 70ch;
+  color: p.$muted;
+  line-height: 1.5;
+}

@@ -1,0 +1,39 @@
+@use "../../sass/palette" as p;
+
+.wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid p.$border;
+  border-radius: 999px;
+  background: rgba(146, 245, 151, 0.04);
+  box-shadow: p.$shadow;
+}
+
+.btn {
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid p.$border;
+  background: rgba(84, 160, 54, 0.06);
+  color: p.$text;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.mid {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  color: p.$muted;
+  font-weight: 800;
+  min-width: 72px;
+  justify-content: center;
+}

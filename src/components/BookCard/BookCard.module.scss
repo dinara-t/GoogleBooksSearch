@@ -1,0 +1,77 @@
+@use "../../sass/palette" as p;
+
+.card {
+  text-align: left;
+  display: grid;
+  grid-template-columns: 86px 1fr;
+  gap: 12px;
+  padding: 14px;
+  border-radius: p.$radius;
+  border: 1px solid p.$border;
+  background: rgba(200, 250, 135, 0.55);
+  box-shadow: p.$shadow;
+  cursor: pointer;
+}
+
+.card:hover {
+  transform: translateY(-1px);
+  background: rgba(213, 255, 63, 0.7);
+}
+
+.coverWrap {
+  width: 86px;
+}
+
+.cover {
+  width: 86px;
+  height: 126px;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 1px solid p.$border;
+  background: rgba(227, 247, 173, 0.06);
+}
+
+.noCover {
+  width: 86px;
+  height: 126px;
+  border-radius: 12px;
+  border: 1px dashed p.$border;
+  display: grid;
+  place-items: center;
+  color: p.$muted;
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.body {
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.25;
+}
+
+.meta {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: p.$muted;
+}
+
+.desc {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: rgba(0, 37, 18, 0.82);
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 5;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+@media (max-width: 640px) {
+  .card {
+    grid-column: span 4;
+  }
+}

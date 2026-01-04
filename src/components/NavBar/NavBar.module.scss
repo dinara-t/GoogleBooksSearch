@@ -1,0 +1,56 @@
+@use "../../sass/palette" as p;
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: rgba(245, 255, 157, 0.72);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid p.$border;
+}
+
+.inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 0;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dot {
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, p.$primary, p.$primary2);
+  box-shadow: 0 0 0 4px rgba(6, 122, 22, 0.18);
+}
+
+.name {
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+.nav {
+  display: flex;
+  gap: 10px;
+}
+
+.link,
+.active {
+  padding: 10px 12px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-weight: 600;
+  color: p.$muted;
+}
+
+.active {
+  color: p.$text;
+  border-color: p.$border;
+  background: rgba(181, 241, 201, 0.06);
+}

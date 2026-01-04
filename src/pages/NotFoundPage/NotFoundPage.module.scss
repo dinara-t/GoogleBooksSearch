@@ -1,0 +1,17 @@
+@use "../../sass/palette" as p;
+
+.page {
+  padding-top: 8px;
+}
+
+.link {
+  display: inline-flex;
+  margin-top: 14px;
+  height: 42px;
+  align-items: center;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid p.$border;
+  background: rgba(187, 245, 160, 0.06);
+  font-weight: 800;
+}

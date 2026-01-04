@@ -1,0 +1,48 @@
+@use "../../sass/palette" as p;
+
+.form {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  background: rgba(230, 240, 178, 0.04);
+  border: 1px solid p.$border;
+  border-radius: p.$radius;
+  padding: 10px;
+  box-shadow: p.$shadow;
+}
+
+.input {
+  height: 46px;
+  padding: 0 14px;
+  border-radius: p.$radiusSm;
+  border: 1px solid transparent;
+  background: rgba(205, 235, 99, 0.6);
+  color: p.$text;
+  outline: none;
+}
+
+.input:focus {
+  border-color: rgba(176, 255, 193, 0.45);
+}
+
+.button {
+  height: 46px;
+  padding: 0 16px;
+  border-radius: p.$radiusSm;
+  border: 1px solid transparent;
+  background: linear-gradient(135deg, p.$primary, p.$primary2);
+  color: #001f10;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (max-width: 560px) {
+  .form {
+    grid-template-columns: 1fr;
+  }
+}

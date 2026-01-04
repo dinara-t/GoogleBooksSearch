@@ -1,0 +1,28 @@
+@use "../../sass/palette" as p;
+
+.page {
+  padding-top: 8px;
+}
+
+.status {
+  margin-top: 12px;
+  min-height: 28px;
+}
+
+.error {
+  margin: 0;
+  color: p.$danger;
+  font-weight: 800;
+}
+
+.loading,
+.empty,
+.hint {
+  margin: 0;
+  color: p.$muted;
+}
+.footer {
+  margin-top: 22px;
+  display: flex;
+  justify-content: center;
+}
