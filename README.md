@@ -6,6 +6,8 @@ The project demonstrates client-side data fetching, component-based UI architect
 ## Live Demo
 https://dinara-t.github.io/GoogleBooksSearch/
 
+https://dinara-t.github.io/GoogleBooksSearch/
+
 ## Features
 
 - Search books by title, author, or keyword
