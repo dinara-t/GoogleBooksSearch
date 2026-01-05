@@ -6,7 +6,7 @@ import "./sass/global.scss";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <BrowserRouter>
+    <BrowserRouter basename="/GoogleBooksSearch">
       <App />
     </BrowserRouter>
   </React.StrictMode>
