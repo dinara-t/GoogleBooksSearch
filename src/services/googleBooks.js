@@ -1,26 +1,30 @@
 const BASE_URL = "https://www.googleapis.com/books/v1/volumes";
-
 const cache = new Map();
 
-const norm = (s) => String(s || "").toLowerCase();
-const keyOf = (q) => norm(q).trim();
+const key = (q) =>
+  String(q || "")
+    .trim()
+    .toLowerCase();
 
-const makeEntry = () => ({
-  apiTotalItems: 0,
-  scanned: 0,
-  nextIndex: 0,
-  done: false,
-  filtered: [],
-});
-
-const ensure = (q) => {
-  const k = keyOf(q);
-  if (!cache.has(k)) cache.set(k, makeEntry());
-  return cache.get(k);
+const getEntry = (q) => {
+  const k = key(q);
+  if (!k) return null;
+  let e = cache.get(k);
+  if (!e) {
+    e = {
+      apiTotalItems: 0,
+      scanned: 0,
+      nextIndex: 0,
+      done: false,
+      filtered: [],
+    };
+    cache.set(k, e);
+  }
+  return e;
 };
 
 export const resetSearchCache = (q) => {
-  cache.delete(keyOf(q || ""));
+  cache.delete(key(q));
 };
 
 const pickThumb = (l) =>
@@ -37,22 +41,22 @@ const normalise = (item) => {
   const s = item?.saleInfo || {};
   const a = item?.accessInfo || {};
 
-  const authorsArr = Array.isArray(v.authors) ? v.authors : [];
-  const categoriesArr = Array.isArray(v.categories) ? v.categories : [];
+  const authors = Array.isArray(v.authors) ? v.authors : [];
+  const categories = Array.isArray(v.categories) ? v.categories : [];
 
   return {
     id: item?.id || "",
     title: v.title || "",
     subtitle: v.subtitle || "",
-    authors: authorsArr,
-    authorsText: authorsArr.join(", "),
+    authors,
+    authorsText: authors.join(", "),
     publishedDate: v.publishedDate || "",
     publisher: v.publisher || "",
     description: v.description || "",
     language: v.language || "",
     country: s?.country || "",
     pageCount: typeof v.pageCount === "number" ? v.pageCount : null,
-    categories: categoriesArr,
+    categories,
     thumbnail: pickThumb(v.imageLinks),
     previewLink: v.previewLink || "",
     infoLink: v.infoLink || "",
@@ -60,20 +64,22 @@ const normalise = (item) => {
   };
 };
 
-const matches = (apiItem, phraseRaw) => {
-  const p = norm(phraseRaw);
+const joinLower = (arr) =>
+  (Array.isArray(arr) ? arr.join(" ") : "").toLowerCase();
+
+const matches = (apiItem, phrase) => {
+  const p = key(phrase);
   const v = apiItem?.volumeInfo || {};
-
-  const title = norm(v.title);
-  const authors = norm((Array.isArray(v.authors) ? v.authors : []).join(" "));
-  const categories = norm(
-    (Array.isArray(v.categories) ? v.categories : []).join(" ")
+  return (
+    String(v.title || "")
+      .toLowerCase()
+      .includes(p) ||
+    joinLower(v.authors).includes(p) ||
+    joinLower(v.categories).includes(p)
   );
-
-  return title.includes(p) || authors.includes(p) || categories.includes(p);
 };
 
-const fetchPage = async ({ q, startIndex, maxResults }) => {
+const fetchPage = async (q, startIndex, maxResults) => {
   const u = new URL(BASE_URL);
   u.searchParams.set("q", q);
   u.searchParams.set("startIndex", String(startIndex));
@@ -90,20 +96,13 @@ const fetchPage = async ({ q, startIndex, maxResults }) => {
   return r.json();
 };
 
-const scanMore = async (query) => {
-  const q = String(query || "").trim();
-  if (!q) return;
-
-  const entry = ensure(q);
-  if (entry.done) return;
+const scanMore = async (raw) => {
+  const q = String(raw || "").trim();
+  const entry = getEntry(q);
+  if (!entry || entry.done) return;
 
   const PAGE = 40;
-
-  const data = await fetchPage({
-    q,
-    startIndex: entry.nextIndex,
-    maxResults: PAGE,
-  });
+  const data = await fetchPage(q, entry.nextIndex, PAGE);
 
   entry.apiTotalItems = Number(data?.totalItems || 0);
 
@@ -116,11 +115,10 @@ const scanMore = async (query) => {
 
   entry.nextIndex += PAGE;
 
-  if (!items.length) entry.done = true;
-  if (entry.apiTotalItems > 0 && entry.nextIndex >= entry.apiTotalItems)
-    entry.done = true;
-
-  if (entry.apiTotalItems === 0 && entry.scanned >= 200) entry.done = true;
+  entry.done =
+    items.length === 0 ||
+    (entry.apiTotalItems > 0 && entry.nextIndex >= entry.apiTotalItems) ||
+    (entry.apiTotalItems === 0 && entry.scanned >= 200);
 };
 
 export const searchBooks = async ({
@@ -134,7 +132,7 @@ export const searchBooks = async ({
 
   if (reset) resetSearchCache(raw);
 
-  const entry = ensure(raw);
+  const entry = getEntry(raw);
   const need = Math.max(0, startIndex + maxResults);
 
   while (!entry.done && entry.filtered.length < need) {
@@ -161,12 +159,11 @@ export const computeFilteredTotal = async (query, opts = {}) => {
   }
 
   const { pageSize = 12, maxPages = 50, maxTitles = 1000 } = opts;
-
-  const entry = ensure(raw);
+  const entry = getEntry(raw);
 
   const pageCapItems = maxPages * pageSize;
 
-  const make = (count, cappedPages, cappedTitles) => {
+  const build = (count, cappedPages, cappedTitles) => {
     const titlesLabel = cappedTitles
       ? `${maxTitles}+`
       : cappedPages
@@ -188,12 +185,10 @@ export const computeFilteredTotal = async (query, opts = {}) => {
 
   while (!entry.done) {
     const count = entry.filtered.length;
-
-    if (count >= maxTitles) return make(count, true, true);
-    if (count > pageCapItems) return make(count, true, false);
-
+    if (count >= maxTitles) return build(count, true, true);
+    if (count > pageCapItems) return build(count, true, false);
     await scanMore(raw);
   }
 
-  return make(entry.filtered.length, false, false);
+  return build(entry.filtered.length, false, false);
 };

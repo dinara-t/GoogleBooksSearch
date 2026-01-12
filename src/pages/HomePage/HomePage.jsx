@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import Heading from "../../components/Heading/Heading.jsx";
 import SearchForm from "../../components/SearchForm/SearchForm.jsx";
 import BookGrid from "../../components/BookGrid/BookGrid.jsx";
@@ -21,60 +21,34 @@ const capLabelsFromApi = (apiTotalItems) => {
   return { titlesLabel, pagesLabel };
 };
 
+const pagesFromLabel = (pagesLabel) => {
+  const s = String(pagesLabel || "1");
+  if (s.endsWith("+")) return 50;
+  const n = Number(s);
+  return Number.isFinite(n) && n > 0 ? n : 1;
+};
+
 const HomePage = () => {
-  const [query, setQuery] = useState("");
-  const [books, setBooks] = useState([]);
-  const [apiTotalItems, setApiTotalItems] = useState(0);
-
-  const [titlesLabel, setTitlesLabel] = useState("0");
-  const [pagesLabel, setPagesLabel] = useState("1");
-
-  const [strictDone, setStrictDone] = useState(false);
-  const [isComputingTotal, setIsComputingTotal] = useState(false);
-
-  const [isLoading, setIsLoading] = useState(false);
-  const [pageNavLoading, setPageNavLoading] = useState(false);
-
-  const [error, setError] = useState("");
-  const [hasSearched, setHasSearched] = useState(false);
-
-  const [selected, setSelected] = useState(null);
-  const [page, setPage] = useState(1);
+  const [state, setState] = useState({
+    query: "",
+    page: 1,
+    books: [],
+    apiTotalItems: 0,
+    labels: { titlesLabel: "0", pagesLabel: "1" },
+    totalStatus: "idle",
+    loading: null,
+    error: "",
+    hasSearched: false,
+    selected: null,
+  });
 
   const runIdRef = useRef(0);
 
-  const totalPagesNumber = useMemo(() => {
-    const pages = Math.max(1, Math.ceil((apiTotalItems || 0) / PAGE_SIZE));
-    return Math.min(pages, 50);
-  }, [apiTotalItems]);
-
-  const hasNext = useMemo(() => {
-    if (!hasSearched || !!error) return false;
-    if (isLoading || pageNavLoading) return false;
-
-    if (pagesLabel === "50+") {
-      return books.length === PAGE_SIZE;
-    }
-
-    return page < totalPagesNumber;
-  }, [
-    hasSearched,
-    error,
-    isLoading,
-    pageNavLoading,
-    pagesLabel,
-    books.length,
-    page,
-    totalPagesNumber,
-  ]);
+  const set = (patch) => setState((s) => ({ ...s, ...patch }));
 
   const runSearchPage = async ({ nextQuery, nextPage, mode }) => {
     const startIndex = (nextPage - 1) * PAGE_SIZE;
-
-    if (mode === "nav") setPageNavLoading(true);
-    else setIsLoading(true);
-
-    setError("");
+    set({ loading: mode, error: "" });
 
     try {
       const data = await searchBooks({
@@ -84,50 +58,46 @@ const HomePage = () => {
         reset: false,
       });
 
-      setHasSearched(true);
+      const apiTotalItems = data.apiTotalItems || 0;
+      const apiLabels = capLabelsFromApi(apiTotalItems);
+      const items = Array.isArray(data.items) ? data.items : [];
 
-      const ati = data.apiTotalItems || 0;
-      setApiTotalItems(ati);
-
-      const apiLabels = capLabelsFromApi(ati);
-      setTitlesLabel(apiLabels.titlesLabel);
-      setPagesLabel(apiLabels.pagesLabel);
-
-      if (!Array.isArray(data.items) || data.items.length === 0) {
-        setBooks([]);
-        return;
-      }
-
-      setBooks(data.items);
+      setState((s) => ({
+        ...s,
+        hasSearched: true,
+        apiTotalItems,
+        books: items,
+        labels: s.totalStatus === "done" ? s.labels : apiLabels,
+      }));
     } catch (e) {
-      setBooks([]);
-      setApiTotalItems(0);
-      setTitlesLabel("0");
-      setPagesLabel("1");
-      setError(e?.message || "Something went wrong.");
-      setHasSearched(true);
+      set({
+        hasSearched: true,
+        books: [],
+        apiTotalItems: 0,
+        labels: { titlesLabel: "0", pagesLabel: "1" },
+        error: e?.message || "Something went wrong.",
+      });
     } finally {
-      if (mode === "nav") setPageNavLoading(false);
-      else setIsLoading(false);
+      set({ loading: null });
     }
   };
 
   const handleSearch = async (q) => {
     const raw = (q || "").trim();
-    const runId = runIdRef.current + 1;
-    runIdRef.current = runId;
+    const runId = ++runIdRef.current;
 
-    setQuery(raw);
-    setPage(1);
-    setBooks([]);
-    setApiTotalItems(0);
-    setTitlesLabel("0");
-    setPagesLabel("1");
-    setStrictDone(false);
-    setIsComputingTotal(false);
+    set({
+      query: raw,
+      page: 1,
+      books: [],
+      apiTotalItems: 0,
+      labels: { titlesLabel: "0", pagesLabel: "1" },
+      totalStatus: "idle",
+      error: "",
+    });
 
     if (!raw) {
-      setHasSearched(false);
+      set({ hasSearched: false });
       return;
     }
 
@@ -135,7 +105,7 @@ const HomePage = () => {
 
     await runSearchPage({ nextQuery: raw, nextPage: 1, mode: "search" });
 
-    setIsComputingTotal(true);
+    set({ totalStatus: "computing" });
 
     computeFilteredTotal(raw, {
       pageSize: PAGE_SIZE,
@@ -144,66 +114,68 @@ const HomePage = () => {
     })
       .then((res) => {
         if (runIdRef.current !== runId) return;
-        setTitlesLabel(res.titlesLabel);
-        setPagesLabel(res.pagesLabel);
-        setStrictDone(true);
+        set({
+          labels: { titlesLabel: res.titlesLabel, pagesLabel: res.pagesLabel },
+        });
       })
-      .catch(() => {
-        if (runIdRef.current !== runId) return;
-        setStrictDone(true);
-      })
+      .catch(() => {})
       .finally(() => {
         if (runIdRef.current !== runId) return;
-        setIsComputingTotal(false);
+        set({ totalStatus: "done" });
       });
   };
 
   const handlePrev = async () => {
-    const nextPage = Math.max(1, page - 1);
-    setPage(nextPage);
-    await runSearchPage({ nextQuery: query, nextPage, mode: "nav" });
+    const nextPage = Math.max(1, state.page - 1);
+    set({ page: nextPage });
+    await runSearchPage({ nextQuery: state.query, nextPage, mode: "nav" });
   };
 
   const handleNext = async () => {
-    const nextPage = page + 1;
-    setPage(nextPage);
-    await runSearchPage({ nextQuery: query, nextPage, mode: "nav" });
+    const nextPage = state.page + 1;
+    set({ page: nextPage });
+    await runSearchPage({ nextQuery: state.query, nextPage, mode: "nav" });
   };
 
+  const isSearchLoading = state.loading === "search";
+  const isNavLoading = state.loading === "nav";
+  const isTotalLoading = state.totalStatus === "computing";
+
   const showNoResults =
-    hasSearched && !isLoading && !error && books.length === 0;
+    state.hasSearched &&
+    !isSearchLoading &&
+    !state.error &&
+    state.books.length === 0;
 
-  const showingText = useMemo(() => {
-    if (!hasSearched || error || isLoading) return "";
-    if (showNoResults) return "";
-    if (!books.length) return "";
+  const paginationVisible =
+    state.hasSearched && !state.error && state.books.length > 0;
 
-    const from = (page - 1) * PAGE_SIZE + 1;
-    const to = (page - 1) * PAGE_SIZE + books.length;
+  const totalPagesNumber = pagesFromLabel(state.labels.pagesLabel);
 
-    if (!strictDone && isComputingTotal) {
+  const hasNext = (() => {
+    if (!state.hasSearched || state.error) return false;
+    if (isSearchLoading || isNavLoading) return false;
+
+    if (String(state.labels.pagesLabel).endsWith("+")) {
+      return state.books.length === PAGE_SIZE;
+    }
+
+    return state.page < totalPagesNumber;
+  })();
+
+  const showingText = (() => {
+    if (!state.hasSearched || state.error || isSearchLoading) return "";
+    if (showNoResults || !state.books.length) return "";
+
+    const from = (state.page - 1) * PAGE_SIZE + 1;
+    const to = (state.page - 1) * PAGE_SIZE + state.books.length;
+
+    if (isTotalLoading && state.totalStatus !== "done") {
       return `Showing ${from}–${to} of (Loading...) results `;
     }
 
-    return `Showing ${from}–${to} of ${titlesLabel} results.`;
-  }, [
-    hasSearched,
-    error,
-    isLoading,
-    showNoResults,
-    books.length,
-    page,
-    titlesLabel,
-    strictDone,
-    isComputingTotal,
-  ]);
-
-  const paginationVisible = useMemo(() => {
-    if (!hasSearched) return false;
-    if (error) return false;
-    if (!books.length) return false;
-    return true;
-  }, [hasSearched, error, books.length]);
+    return `Showing ${from}–${to} of ${state.labels.titlesLabel} results.`;
+  })();
 
   return (
     <div className={styles.page}>
@@ -213,21 +185,27 @@ const HomePage = () => {
       />
 
       <SearchForm
-        initialValue={query}
+        initialValue={state.query}
         onSearch={handleSearch}
-        isLoading={isLoading}
+        isLoading={isSearchLoading}
       />
 
       <div className={styles.status}>
-        {error ? <p className={styles.error}>{error}</p> : null}
-        {isLoading ? <p className={styles.loading}>Loading results…</p> : null}
+        {state.error ? <p className={styles.error}>{state.error}</p> : null}
+
+        {isSearchLoading ? (
+          <p className={styles.loading}>Loading results…</p>
+        ) : null}
+
         {showingText ? <p className={styles.hint}>{showingText}</p> : null}
+
         {showNoResults ? (
           <p className={styles.empty}>
             No results found. Try a different query.
           </p>
         ) : null}
-        {!hasSearched ? (
+
+        {!state.hasSearched ? (
           <p className={styles.hint}>
             Try: “The Lord of the Rings”, “Pride and Prejudice”, “The Great
             Gatsby”.
@@ -235,21 +213,29 @@ const HomePage = () => {
         ) : null}
       </div>
 
-      {books.length ? <BookGrid books={books} onSelect={setSelected} /> : null}
+      {state.books.length ? (
+        <BookGrid
+          books={state.books}
+          onSelect={(selected) => set({ selected })}
+        />
+      ) : null}
 
       {paginationVisible ? (
         <Pagination
-          page={page}
-          totalPagesLabel={pagesLabel}
-          isTotalLoading={isComputingTotal && !strictDone}
+          page={state.page}
+          totalPagesLabel={state.labels.pagesLabel}
+          isTotalLoading={isTotalLoading && state.totalStatus !== "done"}
           hasNext={hasNext}
-          isLoading={pageNavLoading}
+          isLoading={isNavLoading}
           onPrev={handlePrev}
           onNext={handleNext}
         />
       ) : null}
 
-      <BookModal book={selected} onClose={() => setSelected(null)} />
+      <BookModal
+        book={state.selected}
+        onClose={() => set({ selected: null })}
+      />
     </div>
   );
 };

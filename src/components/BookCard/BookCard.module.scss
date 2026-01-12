@@ -11,6 +11,9 @@
   background: rgba(200, 250, 135, 0.55);
   box-shadow: p.$shadow;
   cursor: pointer;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .card:hover {
@@ -51,6 +54,7 @@
   margin: 0;
   font-size: 15px;
   line-height: 1.25;
+  overflow-wrap: anywhere;
 }
 
 .meta {
@@ -68,10 +72,4 @@
   -webkit-line-clamp: 5;
   -webkit-box-orient: vertical;
   overflow: hidden;
-}
-
-@media (max-width: 640px) {
-  .card {
-    grid-column: span 4;
-  }
 }
